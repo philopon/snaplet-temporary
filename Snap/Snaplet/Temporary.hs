@@ -13,7 +13,6 @@ import Control.Lens
 import Snap.Snaplet
 
 import Data.IORef
-import qualified Data.Text as T
 import qualified Data.HashSet as S
 import Data.Hashable
 
@@ -58,12 +57,13 @@ removeAll fls = do
 
 initTemporary :: SnapletInit b Temporary
 initTemporary = makeSnaplet "tmp" "temporary file provider" Nothing $ do
-  name <- maybe "tmp" T.unpack <$> getSnapletName
-  dir  <- liftIO $ newIORef name
+  p    <- getSnapletFilePath
+  liftIO (doesDirectoryExist p) >>= \e -> unless e . fail $ "snaplet directory not found: " ++ p
+  dir  <- liftIO $ newIORef p
   fs   <- liftIO $ newTVarIO S.empty
 
   onUnload $ removeAll fs
-  return $ Temporary dir fs
+  return   $ Temporary dir fs
 
 temporaryFile :: (MonadSnaplet m, MonadIO (m b v), MonadState Temporary (m b Temporary), HasTemporary b) =>
                  Int -> String -> m b v (FilePath, Handle)
